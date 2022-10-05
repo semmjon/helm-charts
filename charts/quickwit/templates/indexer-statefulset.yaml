@@ -15,7 +15,7 @@ spec:
   template:
     metadata:
       annotations:
-        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        checksum/config: {{ include (print $.Template.BasePath "/node-config.yaml") . | sha256sum }}
       {{- with .Values.podAnnotations }}
         {{- toYaml . | nindent 8 }}
       {{- end }}
@@ -62,17 +62,71 @@ spec:
               subPath: node.yaml
             - name: data
               mountPath: /quickwit/qwdata
+            - name: config-indexes
+              mountPath: /quickwit/indexes
+            - name: config-sources
+              mountPath: /quickwit/sources
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      initContainers:
+        - name: init-indexes
+          securityContext:
+            runAsNonRoot: false
+            runAsUser: 0
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+            {{- include "quickwit.environment" . | nindent 12 }}
+            {{- range $key, $value := .Values.indexer.extraEnv }}
+            - name: "{{ $key }}"
+              value: "{{ $value }}"
+            {{- end }}
+          command: ["/bin/sh"]
+          args:
+            - -c
+            # apt update && apt install --reinstall curl ca-certificates -y && curl https://pub.pki.1and1.org/pukirootca1.crt -o /usr/local/share/ca-certificates/pukirootca1.crt && update-ca-certificates --fresh &&
+            - >-
+              apt update && apt remove librdkafka* && apt install libsasl2-dev librdkafka-dev -y&&
+              {{- range $index := .Values.indexConfigurationFiles }}
+              quickwit index create --index-config /quickwit/indexes/{{ $index.name }} --config $QW_CONFIG --overwrite &&
+              {{- if $index.source }}
+                 quickwit source create --index {{ $index.data.index_id }} --source-config /quickwit/sources/{{ $index.source }} &&
+              {{- end }}
+              {{- end }}
+              echo "finished"
+          volumeMounts:
+            - name: config
+              mountPath: /quickwit
+            - name: data
+              mountPath: /quickwit/qwdata
+            - name: config-indexes
+              mountPath: /quickwit/indexes
+            - name: config-sources
+              mountPath: /quickwit/sources
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
       volumes:
         - name: config
-          configMap:
-            name: {{ template "quickwit.fullname" . }}
-            items:
-              - key: node.yaml
-                path: node.yaml
+          secret:
+              secretName: {{ template "quickwit.fullname" . }}-node-config
         - name: data
           emptyDir: {}
+        - name: config-indexes
+          configMap:
+            name: {{ template "quickwit.fullname" . }}-index-configuration
+            items: 
+              {{- range $index := .Values.indexConfigurationFiles }}
+              - key: {{ $index.name }}
+                path: {{ $index.name }}
+              {{- end }}
+        - name: config-sources
+          configMap:
+            name: {{ template "quickwit.fullname" . }}-source-configuration
+            items: 
+              {{- range $source := .Values.sourceConfigurationFiles }}
+              - key: {{ $source.name }}
+                path: {{ $source.name }}
+              {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
@@ -85,3 +139,6 @@ spec:
       tolerations:
         {{- toYaml . | nindent 8 }}
       {{- end }}
+
+
+

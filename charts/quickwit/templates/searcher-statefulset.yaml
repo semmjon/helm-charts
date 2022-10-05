@@ -15,7 +15,7 @@ spec:
   template:
     metadata:
       annotations:
-        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        checksum/config: {{ include (print $.Template.BasePath "/node-config.yaml") . | sha256sum }}
       {{- with .Values.podAnnotations }}
         {{- toYaml . | nindent 8 }}
       {{- end }}
@@ -58,23 +58,39 @@ spec:
             {{- toYaml .Values.searcher.readinessProbe | nindent 12 }}
           volumeMounts:
             - name: config
-              mountPath: /quickwit/node.yaml
-              subPath: node.yaml
+              mountPath: /quickwit
             - name: data
               mountPath: /quickwit/qwdata
+            - name: config-indexes
+              mountPath: /quickwit/indexes
+            - name: config-sources
+              mountPath: /quickwit/sources
           resources:
             {{- toYaml .Values.searcher.resources | nindent 14 }}
       volumes:
         - name: config
-          configMap:
-            name: {{ template "quickwit.fullname" . }}
-            items:
-              - key: node.yaml
-                path: node.yaml
+          secret:
+              secretName: {{ template "quickwit.fullname" . }}-node-config
         {{- if not .Values.searcher.persistentVolume.enabled }}
         - name: data
           emptyDir: {}
         {{- end }}
+        - name: config-indexes
+          configMap:
+            name: {{ template "quickwit.fullname" . }}-index-configuration
+            items: 
+              {{- range $index := .Values.indexConfigurationFiles }}
+              - key: {{ $index.name }}
+                path: {{ $index.name }}
+              {{- end }}
+        - name: config-sources
+          configMap:
+            name: {{ template "quickwit.fullname" . }}-source-configuration
+            items: 
+              {{- range $source := .Values.sourceConfigurationFiles }}
+              - key: {{ $source.name }}
+                path: {{ $source.name }}
+              {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

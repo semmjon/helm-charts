@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ template "quickwit.fullname" . }}-source-configuration
+data:
+{{- if .Values.sourceConfigurationFiles }}
+{{- range $source := .Values.sourceConfigurationFiles }}
+  {{ $source.name }}: |-
+{{ $source.data | toYaml | indent 4}}
+{{- end }}
+{{- end -}}

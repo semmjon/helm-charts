@@ -26,11 +26,11 @@ serviceAccount:
 podAnnotations: {}
 
 podSecurityContext:
-  fsGroup: 1005
+  fsGroup: 0
 
 securityContext:
-  runAsNonRoot: true
-  runAsUser: 1005
+  runAsNonRoot: false
+  runAsUser: 0
 
 # Additional global env (searcher + indexer)
 environment: {}
@@ -57,8 +57,8 @@ searcher:
     # minAvailable: 2
 
   persistentVolume:
-    enabled: false
-    # storage: "1Gi"
+    enabled: true
+    storage: "1Gi"
     # storageClass: ""
 
   updateStrategy: {}
@@ -106,29 +106,120 @@ indexer:
       path: /
       port: http
 
+
 # Quickwit configuration
 config:
   postgres:
-    host: ""
-    port: 5432
+    host: "postgresql.postgresql.svc.cluster.local"
+    port: "5432"
     database: metastore
-    username: quickwit
+    username: metastore
     password: ""
   s3:
     endpoint: ""
-    region: us-east-1
+    region: ""
     access_key: ""
     secret_key: ""
   default_index_root_uri: s3://quickwit/indexes
   # Indexer settings
-  # indexer:
-  #   split_store_max_num_bytes: 200G
-  #   split_store_max_num_splits: 10000
+  indexer:
+    split_store_max_num_bytes: 200G
+    split_store_max_num_splits: 10000
   # Searcher settings
-  # searcher:
-  #   fast_field_cache_capacity: 10G
-  #   split_footer_cache_capacity: 1G
-  #   max_num_concurrent_split_streams: 100  
+  searcher:
+    fast_field_cache_capacity: 10G
+    split_footer_cache_capacity: 1G
+    max_num_concurrent_split_streams: 100  
+  #
+
+indexConfigurationFiles: []
+  # - name: wikipedia-index-config.yaml
+  #   data: 
+  #     #
+  #     # Index config file for wikipedia dataset.
+  #     #
+  #     version: 0
+  #     index_id: wikipedia
+  #     doc_mapping:
+  #       field_mappings:
+  #         - name: title
+  #           type: text
+  #           tokenizer: default
+  #           record: position
+  #           stored: true
+  #         - name: body
+  #           type: text
+  #           tokenizer: default
+  #           record: position
+  #           stored: true
+  #         - name: url
+  #           type: text
+  #           tokenizer: raw
+
+  #     search_settings:
+  #       default_search_fields: [title, body]
+  # - name: gh-archive.yaml
+  #   source: kafka-gh-archive.yaml
+  #   data: 
+  #     #
+  #     # Index config file for gh-archive dataset.
+  #     #
+  #     version: 0
+  #     index_id: gh-archive
+  #     doc_mapping:
+  #       field_mappings:
+  #         - name: id
+  #           type: text
+  #           tokenizer: raw
+  #         - name: type
+  #           type: text
+  #           fast: true
+  #           tokenizer: raw
+  #         - name: public
+  #           type: u64
+  #           fast: true
+  #         - name: payload
+  #           type: json
+  #           tokenizer: default
+  #         - name: org
+  #           type: json
+  #           tokenizer: default
+  #         - name: repo
+  #           type: json
+  #           tokenizer: default
+  #         - name: actor
+  #           type: json
+  #           tokenizer: default
+  #         - name: other
+  #           type: json
+  #           tokenizer: default
+  #         - name: created_at
+  #           type: i64
+  #           fast: true
+
+  #     indexing_settings:
+  #       timestamp_field: created_at
+
+  #     search_settings:
+  #       default_search_fields: []
+
+sourceConfigurationFiles: []
+  # - name: kafka-gh-archive.yaml
+  #   data: 
+  #     #
+  #     # Kafka source config file.
+  #     #
+  #     source_id: kafka-source
+  #     source_type: kafka
+  #     params:
+  #       topic: gh-archive
+  #       client_params:
+  #         bootstrap.servers: kafka.kafka.svc.cluster.local:9094
+  #         group.id: sgeist.console
+  #         security.protocol: SASL_PLAINTEXT
+  #         sasl.mechanism: PLAIN
+  #         sasl.username: user
+  #         sasl.password: password
 
 # Prometheus metrics
 serviceMonitor:

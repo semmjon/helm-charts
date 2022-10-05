@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ template "quickwit.fullname" . }}-index-configuration
+data:
+{{- if .Values.indexConfigurationFiles }}
+{{- range $index := .Values.indexConfigurationFiles }}
+  {{ $index.name }}: |-
+{{ $index.data | toYaml | indent 4}}
+{{- end }}
+{{- end -}}

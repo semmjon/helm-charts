@@ -115,7 +115,7 @@ Quickwit environment
   value: {{ .Values.config.s3.endpoint }}
 {{- end }}
 - name: AWS_REGION
-  value: {{ .Values.config.s3.endpoint | default "us-east-1" }}
+  value: {{ .Values.config.s3.region | default "us-east-1" }}
 - name: AWS_ACCESS_KEY_ID
   value: {{ required "A valid config.s3.access_key is required!" .Values.config.s3.access_key }}
 - name: AWS_SECRET_ACCESS_KEY

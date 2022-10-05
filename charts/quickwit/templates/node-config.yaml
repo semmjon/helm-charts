@@ -1,0 +1,27 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ include "quickwit.fullname" . }}-node-config
+  labels:
+    {{- include "quickwit.labels" . | nindent 4 }}
+    "helm.sh/hook-delete-policy": before-hook-creation
+type: Opaque
+stringData:
+  node.yaml: |-
+    version: 0
+    cluster_id: {{ include "quickwit.fullname" . }}
+    listen_address: 0.0.0.0
+    gossip_listen_port: 7282
+    data_dir: /quickwit/qwdata
+    metastore_uri: postgres://{{ .Values.config.postgres.username | default "quickwit" }}:{{ .Values.config.postgres.password | default "quickwit" }}@{{ required "A valid config.postgres.host is required!" .Values.config.postgres.host }}:{{ .Values.config.postgres.port | default 5432 }}/{{ .Values.config.postgres.database | default "metastore" }}
+    {{- if .Values.config }}
+    default_index_root_uri: {{ .Values.config.default_index_root_uri }}
+    {{- with .Values.config.indexer }}
+    indexer:
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
+    {{- with .Values.config.searcher }}
+    searcher:
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
+    {{- end -}}

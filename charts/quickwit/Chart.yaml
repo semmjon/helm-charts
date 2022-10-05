@@ -1,5 +1,5 @@
 apiVersion: v2
-name: quickwit
+name: dpi-quickwit
 description: Open-Source & Cloud-Native Log Management at any scale.
 type: application
 version: 0.1.4
